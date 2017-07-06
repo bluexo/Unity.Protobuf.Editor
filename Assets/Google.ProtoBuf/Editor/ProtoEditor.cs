@@ -185,7 +185,7 @@ public class ProtoEditor : EditorWindow
         EditorGUILayout.Space();
 
         scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
-        EditorGUILayout.LabelField("Protobuf File Names");
+        EditorGUILayout.LabelField("Protobuf Files");
         for (int i = 0; i < protoFiles.Length; i++) {
             var fileName = protoFiles[i];
             if (protoFileFolds.Length > i) {
