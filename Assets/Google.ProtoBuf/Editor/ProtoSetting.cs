@@ -7,7 +7,7 @@ public enum ProtoVersion { Proto2, Proto3 }
 [CreateAssetMenu(fileName = "ProtoSettingDatabase", menuName = "Configs/CreateProtoSettingDatabase")]
 public class ProtoSetting : ScriptableObject
 {
-    public string ProtoGenerator;
+    public string CSharpGenerator;
     public string CsharpOutput;
     public string LuaGenerator;
     public string LuaOutput;

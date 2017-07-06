@@ -1,7 +1,0 @@
-syntax = "proto3"
-
-message Sample
-{
-	required int32	id	= 1;
-	optional string msg	= 2; 
-}

@@ -3,6 +3,7 @@ using UnityEditor;
 using System.IO;
 using System.Collections.Generic;
 using System.Text;
+using System;
 
 public class ProtoEditor : EditorWindow
 {
@@ -16,6 +17,7 @@ public class ProtoEditor : EditorWindow
     private bool luaFold = true, csharpFold = true;
     private Vector2 scrollPos;
     private int encodingNameIndex = 0;
+    private string csharpCmd, luaCmd;
 
     [MenuItem("Tools/ProtoBuf Generator")]
     public static void Init()
@@ -52,28 +54,42 @@ public class ProtoEditor : EditorWindow
 
     private void OnGUI()
     {
+        csharpCmd = " --proto_path=" + setting.ProtoFilesPath;
+        foreach (var file in protoFiles) {
+            var containsSynx = File.ReadAllText(file).Contains("proto3");
+            if (setting.version == ProtoVersion.Proto2 && containsSynx
+                || setting.version == ProtoVersion.Proto3 && !containsSynx) {
+                //Debug.LogFormat("<color=cyan>Generate C# code fail , proto file invild !, version:{0} , file {1}</color>", setting.version, file);
+                continue;
+            }
+            csharpCmd += " " + file;
+        }
+        csharpCmd += (setting.version == ProtoVersion.Proto2 ? " -output_directory=" : " --csharp_out=" + setting.CsharpOutput);
+
+        luaCmd = " -I=" + setting.ProtoFilesPath.Replace("\\", "/");
+        luaCmd += " --lua_out=" + setting.LuaOutput.Replace("\\", "/");
+        luaCmd += " --plugin=protoc-gen-lua=protoc-gen-lua.bat";
+        foreach (var file in protoFiles) {
+            if (File.ReadAllText(file).Contains("proto3")) {
+                //Debug.LogFormat("<color=cyan>Generate lua code fail , proto file invild !, version:{0} , file {1}</color>", setting.version, file);
+                continue;
+            }
+            luaCmd += " " + file.Replace("\\", "/");
+        }
+
         if (GUILayout.Button("Generate code", GUILayout.ExpandWidth(true), GUILayout.Height(30))) {
             if (setting.CSharp) {
-                var csharpCmd = "--proto_path=" + setting.ProtoFilesPath;
-                foreach (var file in protoFiles) csharpCmd += " " + file;
-                csharpCmd += (setting.version == ProtoVersion.Proto2 ? " -output_directory=" : " --csharp_out=" + setting.CsharpOutput);
-
                 var csharpStartInfo = new System.Diagnostics.ProcessStartInfo();
                 csharpStartInfo.WorkingDirectory = @"c:\";
-                csharpStartInfo.FileName = setting.ProtoGenerator;
+                csharpStartInfo.FileName = setting.CSharpGenerator;
                 csharpStartInfo.CreateNoWindow = false;
                 csharpStartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Normal;
                 csharpStartInfo.ErrorDialog = true;
                 csharpStartInfo.Arguments = csharpCmd;
-                //var csharpProcess = System.Diagnostics.Process.Start(csharpStartInfo);
-                var csharpProcess = System.Diagnostics.Process.Start("cmd", setting.ProtoGenerator + " " + csharpCmd);
+                var csharpProcess = System.Diagnostics.Process.Start(csharpStartInfo);
                 csharpProcess.WaitForInputIdle();
             }
             if (setting.Lua && setting.version == ProtoVersion.Proto2) {
-                var luaCmd = " -I=" + setting.ProtoFilesPath.Replace("\\", "/");
-                luaCmd += " --lua_out=" + setting.LuaOutput.Replace("\\", "/");
-                luaCmd += " --plugin=protoc-gen-lua=protoc-gen-lua.bat";
-                foreach (var file in protoFiles) luaCmd += " " + file.Replace("\\", "/");
                 var luaStartInfo = new System.Diagnostics.ProcessStartInfo();
                 luaStartInfo.CreateNoWindow = false;
                 luaStartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Normal;
@@ -95,12 +111,11 @@ public class ProtoEditor : EditorWindow
             EditorGUILayout.BeginHorizontal(GUILayout.ExpandWidth(true));
             if (GUILayout.Button("C# generate tool", GUILayout.Width(120))) {
                 string path = EditorUtility.OpenFilePanel("Select Tool ProtoGen.exe in ProtoBuf", "", "");
-                Debug.Log(path);
-                setting.ProtoGenerator = path.Replace("/", "\\");
-                Debug.Log(setting.ProtoGenerator);
+                setting.CSharpGenerator = path.Replace("/", "\\");
+                Debug.Log(setting.CSharpGenerator);
                 EditorUtility.SetDirty(setting);
             }
-            setting.ProtoGenerator = EditorGUILayout.TextField(new GUIContent(""), setting.ProtoGenerator);
+            setting.CSharpGenerator = EditorGUILayout.TextField(new GUIContent(""), setting.CSharpGenerator);
             EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.BeginHorizontal(GUILayout.ExpandWidth(true));
@@ -113,6 +128,10 @@ public class ProtoEditor : EditorWindow
             setting.CsharpOutput = EditorGUILayout.TextField(new GUIContent(""), setting.CsharpOutput);
             EditorGUILayout.EndHorizontal();
             setting.CSharp = EditorGUILayout.Toggle("Generate", setting.CSharp);
+            if (setting.CSharp) {
+                EditorGUILayout.PrefixLabel("CMD Preview");
+                EditorGUILayout.TextArea(setting.CSharpGenerator + csharpCmd);
+            }
             EditorGUILayout.EndVertical();
             EditorGUI.DrawRect(csharpRect, Color.cyan / 3f);
         }
@@ -138,14 +157,15 @@ public class ProtoEditor : EditorWindow
             setting.LuaOutput = EditorGUILayout.TextField(new GUIContent(""), setting.LuaOutput);
             EditorGUILayout.EndHorizontal();
             setting.Lua = EditorGUILayout.Toggle("Generate", setting.Lua);
+            if (setting.Lua) {
+                EditorGUILayout.PrefixLabel("CMD Preview");
+                EditorGUILayout.TextArea(setting.LuaGenerator + luaCmd);
+            }
             EditorGUILayout.EndVertical();
             EditorGUI.DrawRect(luaRect, Color.blue / 3f);
         }
 
-        EditorGUILayout.Space();
-        EditorGUILayout.Space();
-        EditorGUILayout.Space();
-        EditorGUILayout.Space();
+        GUILayout.Space(25f);
 
         EditorGUILayout.BeginHorizontal(GUILayout.ExpandWidth(true));
         if (GUILayout.Button("Proto Files Dir", GUILayout.Width(120))) {
@@ -170,6 +190,7 @@ public class ProtoEditor : EditorWindow
             var fileName = protoFiles[i];
             if (protoFileFolds.Length > i) {
                 if (protoFileFolds[i] = EditorGUILayout.Foldout(protoFileFolds[i], (i + 1).ToString() + " : " + fileName)) {
+                    if (!File.Exists(fileName)) continue;
                     var text = File.ReadAllText(fileName, Encoding.GetEncoding(encodingNames[encodingNameIndex]));
                     EditorGUILayout.TextArea(text);
                 }
@@ -178,7 +199,6 @@ public class ProtoEditor : EditorWindow
         }
         EditorGUILayout.EndScrollView();
 
-        EditorGUILayout.Space();
-        EditorGUILayout.Space();
+        GUILayout.Space(15f);
     }
 }
