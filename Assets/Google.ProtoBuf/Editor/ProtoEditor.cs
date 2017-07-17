@@ -58,7 +58,7 @@ public class ProtoEditor : EditorWindow
         csharpCmd += (setting.version == ProtoVersion.Proto2 ? " -output_directory=" : " --csharp_out=" + setting.CsharpOutput);
         foreach (var file in protoFiles) {
             var containsSynx = File.ReadAllText(file).Contains("proto3");
-            if (setting.version == ProtoVersion.Proto2 && containsSynx || setting.version == ProtoVersion.Proto3 && !containsSynx)  continue;
+            if (setting.version == ProtoVersion.Proto2 && containsSynx || setting.version == ProtoVersion.Proto3 && !containsSynx) continue;
             csharpCmd += " " + file + "\n";
         }
 
@@ -127,6 +127,7 @@ public class ProtoEditor : EditorWindow
             }
             EditorGUILayout.EndVertical();
             EditorGUI.DrawRect(csharpRect, Color.cyan / 3f);
+            EditorGUILayout.HelpBox("C# generator must be use ProtoGen.exe to generate proto2 files !", MessageType.Info, true);
         }
 
         luaFold = EditorGUILayout.Foldout(luaFold, "Lua generate option");
@@ -156,6 +157,8 @@ public class ProtoEditor : EditorWindow
             }
             EditorGUILayout.EndVertical();
             EditorGUI.DrawRect(luaRect, Color.blue / 3f);
+            if (setting.version == ProtoVersion.Proto3 && setting.Lua)
+                EditorGUILayout.HelpBox("Lua generator does not support proto3 !", MessageType.Warning, true);
         }
 
         GUILayout.Space(25f);
