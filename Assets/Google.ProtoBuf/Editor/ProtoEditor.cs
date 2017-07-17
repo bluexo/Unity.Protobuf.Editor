@@ -31,7 +31,7 @@ public class ProtoEditor : EditorWindow
     {
         if (setting == null) LoadSetting();
         if (!string.IsNullOrEmpty(setting.ProtoFilesPath)) {
-            protoFiles = Directory.GetFiles(setting.ProtoFilesPath, "*.proto");
+            protoFiles = Directory.GetFiles(setting.ProtoFilesPath, "*.proto", SearchOption.AllDirectories);
             protoFileFolds = new bool[protoFiles.Length];
         }
     }
