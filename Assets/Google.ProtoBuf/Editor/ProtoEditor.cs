@@ -55,7 +55,7 @@ public class ProtoEditor : EditorWindow
     private void OnGUI()
     {
         csharpCmd = "\n --proto_path=" + setting.ProtoFilesPath + "\n";
-        csharpCmd += (setting.version == ProtoVersion.Proto2 ? " -output_directory=" : " --csharp_out=" + setting.CsharpOutput);
+        csharpCmd += " --csharp_out=" + setting.CsharpOutput + "\n";
         foreach (var file in protoFiles) {
             var containsSynx = File.ReadAllText(file).Contains("proto3");
             if (setting.version == ProtoVersion.Proto2 && containsSynx || setting.version == ProtoVersion.Proto3 && !containsSynx) continue;
@@ -71,7 +71,7 @@ public class ProtoEditor : EditorWindow
         }
 
         if (GUILayout.Button("Generate code", GUILayout.ExpandWidth(true), GUILayout.Height(30))) {
-            if (setting.CSharp) {
+            if (setting.CSharp && setting.version == ProtoVersion.Proto3) {
                 var csharpStartInfo = new System.Diagnostics.ProcessStartInfo();
                 csharpStartInfo.WorkingDirectory = @"c:\";
                 csharpStartInfo.FileName = setting.CSharpGenerator;
@@ -127,7 +127,8 @@ public class ProtoEditor : EditorWindow
             }
             EditorGUILayout.EndVertical();
             EditorGUI.DrawRect(csharpRect, Color.cyan / 3f);
-            EditorGUILayout.HelpBox("C# generator must be use ProtoGen.exe to generate proto2 files !", MessageType.Info, true);
+            if (setting.CSharp && setting.version == ProtoVersion.Proto2)
+                EditorGUILayout.HelpBox("C# generator does not support proto2 !", MessageType.Warning, true);
         }
 
         luaFold = EditorGUILayout.Foldout(luaFold, "Lua generate option");
@@ -157,7 +158,7 @@ public class ProtoEditor : EditorWindow
             }
             EditorGUILayout.EndVertical();
             EditorGUI.DrawRect(luaRect, Color.blue / 3f);
-            if (setting.version == ProtoVersion.Proto3 && setting.Lua)
+            if (setting.Lua && setting.version == ProtoVersion.Proto3 && setting.Lua)
                 EditorGUILayout.HelpBox("Lua generator does not support proto3 !", MessageType.Warning, true);
         }
 
