@@ -54,27 +54,20 @@ public class ProtoEditor : EditorWindow
 
     private void OnGUI()
     {
-        csharpCmd = " --proto_path=" + setting.ProtoFilesPath;
+        csharpCmd = "\n --proto_path=" + setting.ProtoFilesPath + "\n";
+        csharpCmd += (setting.version == ProtoVersion.Proto2 ? " -output_directory=" : " --csharp_out=" + setting.CsharpOutput);
         foreach (var file in protoFiles) {
             var containsSynx = File.ReadAllText(file).Contains("proto3");
-            if (setting.version == ProtoVersion.Proto2 && containsSynx
-                || setting.version == ProtoVersion.Proto3 && !containsSynx) {
-                //Debug.LogFormat("<color=cyan>Generate C# code fail , proto file invild !, version:{0} , file {1}</color>", setting.version, file);
-                continue;
-            }
-            csharpCmd += " " + file;
+            if (setting.version == ProtoVersion.Proto2 && containsSynx || setting.version == ProtoVersion.Proto3 && !containsSynx)  continue;
+            csharpCmd += " " + file + "\n";
         }
-        csharpCmd += (setting.version == ProtoVersion.Proto2 ? " -output_directory=" : " --csharp_out=" + setting.CsharpOutput);
 
-        luaCmd = " -I=" + setting.ProtoFilesPath.Replace("\\", "/");
-        luaCmd += " --lua_out=" + setting.LuaOutput.Replace("\\", "/");
+        luaCmd = "\n -I=" + setting.ProtoFilesPath.Replace("\\", "/") + "\n";
+        luaCmd += " --lua_out=" + setting.LuaOutput.Replace("\\", "/") + "\n";
         luaCmd += " --plugin=protoc-gen-lua=protoc-gen-lua.bat";
         foreach (var file in protoFiles) {
-            if (File.ReadAllText(file).Contains("proto3")) {
-                //Debug.LogFormat("<color=cyan>Generate lua code fail , proto file invild !, version:{0} , file {1}</color>", setting.version, file);
-                continue;
-            }
-            luaCmd += " " + file.Replace("\\", "/");
+            if (File.ReadAllText(file).Contains("proto3")) continue;
+            luaCmd += " " + file.Replace("\\", "/") + "\n";
         }
 
         if (GUILayout.Button("Generate code", GUILayout.ExpandWidth(true), GUILayout.Height(30))) {
