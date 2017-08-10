@@ -7,9 +7,21 @@ using System;
 
 public class ProtoEditor : EditorWindow
 {
-    private const string DATABASE_PATH = @"Assets/Resources/Configs/ProtoSettingDatabase.asset";
+    public enum ProtoVersion { Proto2, Proto3 }
+    [Serializable]
+    public class Setting
+    {
+        public string ProtoFilesPath = string.Empty,
+            CSharpGenerator = string.Empty,
+            LuaGenerator = string.Empty,
+            CSharpOutput = string.Empty,
+            LuaOutput = string.Empty;
+        public bool CSharp, Lua;
+        public ProtoVersion version = ProtoVersion.Proto2;
+    }
+    public string protoSettingKey = "ProtoSetting";
     private readonly string[] encodingNames = { "utf-8", "gbk", "unicode" };
-    private ProtoSetting setting;
+    private Setting setting;
     private Vector2 _scrollPos;
     private string[] protoFiles = { };
     private bool[] protoFileFolds = { };
@@ -29,34 +41,31 @@ public class ProtoEditor : EditorWindow
 
     void OnEnable()
     {
-        if (setting == null) LoadSetting();
-        if (!string.IsNullOrEmpty(setting.ProtoFilesPath)) {
+        if (!EditorPrefs.HasKey(protoSettingKey))
+        {
+            setting = new Setting();
+            var json = JsonUtility.ToJson(setting);
+            EditorPrefs.SetString(protoSettingKey, json);
+        }
+        else
+        {
+            var json = EditorPrefs.GetString(protoSettingKey);
+            setting = JsonUtility.FromJson<Setting>(json);
+        }
+        if (!string.IsNullOrEmpty(setting.ProtoFilesPath))
+        {
             protoFiles = Directory.GetFiles(setting.ProtoFilesPath, "*.proto", SearchOption.AllDirectories);
             protoFileFolds = new bool[protoFiles.Length];
         }
     }
 
-    void LoadSetting()
-    {
-        setting = (ProtoSetting)AssetDatabase.LoadAssetAtPath(DATABASE_PATH, typeof(ProtoSetting));
-        if (!setting) CreateSetting();
-    }
-
-    void CreateSetting()
-    {
-        setting = CreateInstance<ProtoSetting>();
-        var configDir = Directory.GetCurrentDirectory() + "/Assets/Resources/Configs/";
-        if (!Directory.Exists(configDir)) Directory.CreateDirectory(configDir);
-        AssetDatabase.CreateAsset(setting, DATABASE_PATH);
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-    }
 
     private void OnGUI()
     {
         csharpCmd = "\n --proto_path=" + setting.ProtoFilesPath + "\n";
-        csharpCmd += " --csharp_out=" + setting.CsharpOutput + "\n";
-        foreach (var file in protoFiles) {
+        csharpCmd += " --csharp_out=" + setting.CSharpOutput + "\n";
+        foreach (var file in protoFiles)
+        {
             var containsSynx = File.ReadAllText(file).Contains("proto3");
             if (setting.version == ProtoVersion.Proto2 && containsSynx || setting.version == ProtoVersion.Proto3 && !containsSynx) continue;
             csharpCmd += " " + file + "\n";
@@ -65,13 +74,16 @@ public class ProtoEditor : EditorWindow
         luaCmd = "\n -I=" + setting.ProtoFilesPath.Replace("\\", "/") + "\n";
         luaCmd += " --lua_out=" + setting.LuaOutput.Replace("\\", "/") + "\n";
         luaCmd += " --plugin=protoc-gen-lua=protoc-gen-lua.bat";
-        foreach (var file in protoFiles) {
+        foreach (var file in protoFiles)
+        {
             if (File.ReadAllText(file).Contains("proto3")) continue;
             luaCmd += " " + file.Replace("\\", "/") + "\n";
         }
 
-        if (GUILayout.Button("Generate code", GUILayout.ExpandWidth(true), GUILayout.Height(30))) {
-            if (setting.CSharp && setting.version == ProtoVersion.Proto3) {
+        if (GUILayout.Button("Generate code", GUILayout.ExpandWidth(true), GUILayout.Height(30)))
+        {
+            if (setting.CSharp && setting.version == ProtoVersion.Proto3)
+            {
                 var csharpStartInfo = new System.Diagnostics.ProcessStartInfo();
                 csharpStartInfo.WorkingDirectory = @"c:\";
                 csharpStartInfo.FileName = setting.CSharpGenerator;
@@ -82,7 +94,8 @@ public class ProtoEditor : EditorWindow
                 var csharpProcess = System.Diagnostics.Process.Start(csharpStartInfo);
                 csharpProcess.WaitForInputIdle();
             }
-            if (setting.Lua && setting.version == ProtoVersion.Proto2) {
+            if (setting.Lua && setting.version == ProtoVersion.Proto2)
+            {
                 var luaStartInfo = new System.Diagnostics.ProcessStartInfo();
                 luaStartInfo.CreateNoWindow = false;
                 luaStartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Normal;
@@ -99,29 +112,31 @@ public class ProtoEditor : EditorWindow
         }
 
         csharpFold = EditorGUILayout.Foldout(csharpFold, "C# generate option");
-        if (csharpFold) {
+        if (csharpFold)
+        {
             var csharpRect = EditorGUILayout.BeginVertical();
             EditorGUILayout.BeginHorizontal(GUILayout.ExpandWidth(true));
-            if (GUILayout.Button("C# generate tool", GUILayout.Width(120))) {
+            if (GUILayout.Button("C# generate tool", GUILayout.Width(120)))
+            {
                 string path = EditorUtility.OpenFilePanel("Select Tool ProtoGen.exe in ProtoBuf", "", "");
                 setting.CSharpGenerator = path.Replace("/", "\\");
                 Debug.Log(setting.CSharpGenerator);
-                EditorUtility.SetDirty(setting);
             }
             setting.CSharpGenerator = EditorGUILayout.TextField(new GUIContent(""), setting.CSharpGenerator);
             EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.BeginHorizontal(GUILayout.ExpandWidth(true));
-            if (GUILayout.Button("C# output", GUILayout.Width(120))) {
+            if (GUILayout.Button("C# output", GUILayout.Width(120)))
+            {
                 string path = EditorUtility.OpenFolderPanel("Select C# Output Dir", "", "");
 
-                setting.CsharpOutput = path.Replace("/", "\\");
-                EditorUtility.SetDirty(setting);
+                setting.CSharpOutput = path.Replace("/", "\\");
             }
-            setting.CsharpOutput = EditorGUILayout.TextField(new GUIContent(""), setting.CsharpOutput);
+            setting.CSharpOutput = EditorGUILayout.TextField(new GUIContent(""), setting.CSharpOutput);
             EditorGUILayout.EndHorizontal();
             setting.CSharp = EditorGUILayout.Toggle("Generate", setting.CSharp);
-            if (setting.CSharp) {
+            if (setting.CSharp)
+            {
                 EditorGUILayout.PrefixLabel("CMD Preview");
                 EditorGUILayout.TextArea(setting.CSharpGenerator + csharpCmd);
             }
@@ -132,27 +147,29 @@ public class ProtoEditor : EditorWindow
         }
 
         luaFold = EditorGUILayout.Foldout(luaFold, "Lua generate option");
-        if (luaFold) {
+        if (luaFold)
+        {
             var luaRect = EditorGUILayout.BeginVertical();
             EditorGUILayout.BeginHorizontal(GUILayout.ExpandWidth(true));
-            if (GUILayout.Button("Lua generate tool", GUILayout.Width(120))) {
+            if (GUILayout.Button("Lua generate tool", GUILayout.Width(120)))
+            {
                 string path = EditorUtility.OpenFilePanel("Select Lua tool", "", "");
                 setting.LuaGenerator = path.Replace("/", "\\");
-                EditorUtility.SetDirty(setting);
             }
             setting.LuaGenerator = EditorGUILayout.TextField(new GUIContent(""), setting.LuaGenerator);
             EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.BeginHorizontal(GUILayout.ExpandWidth(true));
-            if (GUILayout.Button("Lua output", GUILayout.Width(120))) {
+            if (GUILayout.Button("Lua output", GUILayout.Width(120)))
+            {
                 string path = EditorUtility.OpenFolderPanel("Select lua output dir", "", "");
                 setting.LuaOutput = path.Replace("/", "\\");
-                EditorUtility.SetDirty(setting);
             }
             setting.LuaOutput = EditorGUILayout.TextField(new GUIContent(""), setting.LuaOutput);
             EditorGUILayout.EndHorizontal();
             setting.Lua = EditorGUILayout.Toggle("Generate", setting.Lua);
-            if (setting.Lua) {
+            if (setting.Lua)
+            {
                 EditorGUILayout.PrefixLabel("CMD Preview");
                 EditorGUILayout.TextArea(setting.LuaGenerator + luaCmd);
             }
@@ -165,14 +182,15 @@ public class ProtoEditor : EditorWindow
         GUILayout.Space(25f);
 
         EditorGUILayout.BeginHorizontal(GUILayout.ExpandWidth(true));
-        if (GUILayout.Button("Proto Files Dir", GUILayout.Width(120))) {
+        if (GUILayout.Button("Proto Files Dir", GUILayout.Width(120)))
+        {
             string path = EditorUtility.OpenFolderPanel("Select Proto Files Dir", "", "");
-            if (!string.IsNullOrEmpty(path)) {
+            if (!string.IsNullOrEmpty(path))
+            {
                 protoFiles = Directory.GetFiles(path);
                 setting.ProtoFilesPath = path.Replace("/", "\\");
             }
             OnEnable();
-            EditorUtility.SetDirty(setting);
         }
 
         setting.ProtoFilesPath = EditorGUILayout.TextField("", setting.ProtoFilesPath);
@@ -183,10 +201,13 @@ public class ProtoEditor : EditorWindow
 
         scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
         EditorGUILayout.LabelField("Protobuf Files");
-        for (int i = 0; i < protoFiles.Length; i++) {
+        for (int i = 0; i < protoFiles.Length; i++)
+        {
             var fileName = protoFiles[i];
-            if (protoFileFolds.Length > i) {
-                if (protoFileFolds[i] = EditorGUILayout.Foldout(protoFileFolds[i], (i + 1).ToString() + " : " + fileName)) {
+            if (protoFileFolds.Length > i)
+            {
+                if (protoFileFolds[i] = EditorGUILayout.Foldout(protoFileFolds[i], (i + 1).ToString() + " : " + fileName))
+                {
                     if (!File.Exists(fileName)) continue;
                     var text = File.ReadAllText(fileName, Encoding.GetEncoding(encodingNames[encodingNameIndex]));
                     EditorGUILayout.TextArea(text);
@@ -197,5 +218,7 @@ public class ProtoEditor : EditorWindow
         EditorGUILayout.EndScrollView();
 
         GUILayout.Space(15f);
+
+        EditorPrefs.SetString(protoSettingKey, JsonUtility.ToJson(setting));
     }
 }
