@@ -1,9 +1,9 @@
-﻿using UnityEngine;
-using UnityEditor;
-using System.IO;
+﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
-using System;
+using UnityEditor;
+using UnityEngine;
 
 public class ProtoEditor : EditorWindow
 {
@@ -39,7 +39,7 @@ public class ProtoEditor : EditorWindow
         window.Show();
     }
 
-    void OnEnable()
+    private void OnEnable()
     {
         if (!EditorPrefs.HasKey(protoSettingKey))
         {
@@ -84,23 +84,27 @@ public class ProtoEditor : EditorWindow
         {
             if (setting.CSharp && setting.version == ProtoVersion.Proto3)
             {
-                var csharpStartInfo = new System.Diagnostics.ProcessStartInfo();
-                csharpStartInfo.WorkingDirectory = @"c:\";
-                csharpStartInfo.FileName = setting.CSharpGenerator;
-                csharpStartInfo.CreateNoWindow = false;
-                csharpStartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Normal;
-                csharpStartInfo.ErrorDialog = true;
-                csharpStartInfo.Arguments = csharpCmd;
+                var csharpStartInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    WorkingDirectory = @"c:\",
+                    FileName = setting.CSharpGenerator,
+                    CreateNoWindow = false,
+                    WindowStyle = System.Diagnostics.ProcessWindowStyle.Normal,
+                    ErrorDialog = true,
+                    Arguments = csharpCmd
+                };
                 var csharpProcess = System.Diagnostics.Process.Start(csharpStartInfo);
                 csharpProcess.WaitForInputIdle();
             }
             if (setting.Lua && setting.version == ProtoVersion.Proto2)
             {
-                var luaStartInfo = new System.Diagnostics.ProcessStartInfo();
-                luaStartInfo.CreateNoWindow = false;
-                luaStartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Normal;
-                luaStartInfo.ErrorDialog = true;
-                luaStartInfo.FileName = setting.LuaGenerator;
+                var luaStartInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    CreateNoWindow = false,
+                    WindowStyle = System.Diagnostics.ProcessWindowStyle.Normal,
+                    ErrorDialog = true,
+                    FileName = setting.LuaGenerator
+                };
                 var strs = setting.LuaGenerator.Split('\\');
                 var genLength = strs[strs.Length - 1].Length;
                 luaStartInfo.WorkingDirectory = setting.LuaGenerator.Remove(setting.LuaGenerator.Length - genLength, genLength);
@@ -190,7 +194,6 @@ public class ProtoEditor : EditorWindow
                 protoFiles = Directory.GetFiles(path);
                 setting.ProtoFilesPath = path.Replace("/", "\\");
             }
-            OnEnable();
         }
 
         setting.ProtoFilesPath = EditorGUILayout.TextField("", setting.ProtoFilesPath);
