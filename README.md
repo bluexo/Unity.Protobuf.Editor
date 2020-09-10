@@ -29,4 +29,4 @@ Unity3d Google Protobuf C# & lua generator
         //Deserialize from json string
         sample = Proto3Sample.Parser.ParseJson("");
 ```
-![](./Screenshots/Image.PNG)
+![Screenshot](Screenshots/Image.PNG)
