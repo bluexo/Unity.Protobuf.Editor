@@ -30,6 +30,7 @@ public class ProtoEditor : EditorWindow
     private Vector2 scrollPos;
     private int encodingNameIndex = 0;
     private string csharpCmd, luaCmd;
+    private float prevRefreshTime = 0;
 
     [MenuItem("Tools/ProtoBuf Generator")]
     public static void Init()
@@ -52,11 +53,17 @@ public class ProtoEditor : EditorWindow
             var json = EditorPrefs.GetString(protoSettingKey);
             setting = JsonUtility.FromJson<Setting>(json);
         }
+    }
+
+    private void RefreshFiles()
+    {
+        if (Time.time - prevRefreshTime < 1) return;
         if (!string.IsNullOrEmpty(setting.ProtoFilesPath))
         {
             protoFiles = Directory.GetFiles(setting.ProtoFilesPath, "*.proto", SearchOption.AllDirectories);
             protoFileFolds = new bool[protoFiles.Length];
         }
+        prevRefreshTime = Time.time;
     }
 
 
@@ -197,6 +204,7 @@ public class ProtoEditor : EditorWindow
         }
 
         setting.ProtoFilesPath = EditorGUILayout.TextField("", setting.ProtoFilesPath);
+
         EditorGUILayout.EndHorizontal();
         setting.version = (ProtoVersion)EditorGUILayout.EnumPopup("Version", setting.version);
         encodingNameIndex = EditorGUILayout.Popup("Encoding", encodingNameIndex, encodingNames);
@@ -204,6 +212,7 @@ public class ProtoEditor : EditorWindow
 
         scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
         EditorGUILayout.LabelField("Protobuf Files");
+        RefreshFiles();
         for (int i = 0; i < protoFiles.Length; i++)
         {
             var fileName = protoFiles[i];
